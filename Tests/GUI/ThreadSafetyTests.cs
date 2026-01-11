@@ -48,15 +48,6 @@ namespace Tests.GUI
             });
         }
 
-        // The sequence to start a task seems to be:
-        // 1. ldftn the function to start
-        // 2. newobj a System.Action to hold it
-        // 3. callvirt StartNew
-        // ... so find the operand of the ldftn most immediately preceding the call
-        private static MethodDefinition? FindStartNewArgument(Instruction instr)
-            => instr.OpCode.Name == "ldftn" ? instr.Operand as MethodDefinition
-                                            : FindStartNewArgument(instr.Previous);
-
         private static IEnumerable<MethodCall> GetAllCallsWithoutForbidGUI(MethodCall initialStack)
             => VisitMethodDefinition(initialStack,
                                      initialStack.Last(),
