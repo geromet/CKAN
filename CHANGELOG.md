@@ -12,11 +12,12 @@ All notable changes to this project will be documented in this file.
 
 - [Core] Ensure encoding is UTF-8 when saving JSON (#4475, #4478 by: HebaruSan)
 - [GUI] Display release date in local time zone (#4488 by: HebaruSan)
+- [GUI] Fix freezing after startup with empty mod list (#4491 by: HebaruSan)
 
 ### Internal
 
 - [Docs] Update download count image for Minkowski² (#4474 by: Clayell; reviewed: HebaruSan)
-- [Netkan] Fix x_netkan_epoch not applied before unreliable server check (#4477 by: HebaruSan)
+- [Netkan] Fix `x_netkan_epoch` not applied before unreliable server check (#4477 by: HebaruSan)
 
 ## v1.36.2 (Politas)
 
