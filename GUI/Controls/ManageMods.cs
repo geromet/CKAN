@@ -1121,6 +1121,18 @@ namespace CKAN.GUI
                     guiMod.SelectedMod = guiMod.InstalledMod?.Module;
                     switch (change.ChangeType)
                     {
+                        case GUIModChangeType.Remove:
+                            if (row.Cells[Installed.Index] is DataGridViewCheckBoxCell instCell)
+                            {
+                                instCell.Value = true;
+                            }
+                            break;
+                        case GUIModChangeType.Install:
+                            if (row.Cells[Installed.Index] is DataGridViewCheckBoxCell rmCell)
+                            {
+                                rmCell.Value = false;
+                            }
+                            break;
                         case GUIModChangeType.Replace:
                             if (row.Cells[ReplaceCol.Index] is DataGridViewCheckBoxCell checkCell)
                             {
