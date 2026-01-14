@@ -307,7 +307,7 @@ namespace CKAN.GUI
                                 // and any mods depending on them
                                 var dependers = Registry.FindReverseDependencies(
                                         skip.Select(s => s.identifier).ToList(),
-                                        null,
+                                        Array.Empty<CkanModule>(),
                                         registry.InstalledModules.Select(im => im.Module)
                                                                  .Concat(fullChangeset)
                                                                  .ToArray(),

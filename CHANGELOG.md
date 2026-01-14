@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - [GUI] Display release date in local time zone (#4488 by: HebaruSan)
 - [GUI] Fix freezing after startup with empty mod list (#4491, #4492 by: HebaruSan)
 - [GUI] Remove dependencies from changeset when skipping a change (#4495 by: HebaruSan)
+- [Multiple] Allow newly installed versions to satisfy deps (#4496 by: HebaruSan)
 
 ### Internal
 
