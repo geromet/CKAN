@@ -70,7 +70,7 @@ namespace CKAN.GUI
                             dfd = new DownloadsFailedDialog(
                                 Properties.Resources.ModDownloadsFailedMessage,
                                 Properties.Resources.ModDownloadsFailedColHdr,
-                                Properties.Resources.ModDownloadsFailedAbortBtn,
+                                Properties.Resources.ModDownloadsFailedAbortBtnNotInstalling,
                                 k.Exceptions.Select(kvp => new KeyValuePair<object[], Exception>(
                                     modules.Select(m => m.Module).ToArray(), kvp.Value)),
                                 (m1, m2) => (m1 as CkanModule)?.download == (m2 as CkanModule)?.download);
