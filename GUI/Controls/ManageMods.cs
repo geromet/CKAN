@@ -96,14 +96,15 @@ namespace CKAN.GUI
         private Dictionary<GUIMod, string>? conflicts;
         private bool freezeChangeSet = false;
 
-        public event Action<string>?  RaiseMessage;
-        public event Action<string>?  RaiseError;
-        public event Action<string>?  SetStatusBar;
-        public event Action?          ClearStatusBar;
-        public event Action<string>?  LaunchGame;
-        public event Action?          EditCommandLines;
+        public event Action<string>?                      RaiseMessage;
+        public event Action<string>?                      RaiseError;
+        public event Action<string>?                      SetStatusBar;
+        public event Action?                              ClearStatusBar;
+        public event Action<string>?                      LaunchGame;
+        public event Action?                              EditCommandLines;
+        public event Action<IReadOnlyCollection<GUIMod>>? DownloadModules;
 
-        public ModList? mainModList
+        public ModList? MainModList
         {
             get;
             [ForbidGUICalls]
@@ -184,9 +185,9 @@ namespace CKAN.GUI
                 var removing = changeIdentifiersOfType(GUIModChangeType.Remove)
                                .Except(changeIdentifiersOfType(GUIModChangeType.Install))
                                .ToHashSet();
-                if (mainModList != null)
+                if (MainModList != null)
                 {
-                    foreach ((string ident, DataGridViewRow row) in mainModList.full_list_of_mod_rows)
+                    foreach ((string ident, DataGridViewRow row) in MainModList.full_list_of_mod_rows)
                     {
                         if (removing.Contains(ident))
                         {
@@ -260,7 +261,7 @@ namespace CKAN.GUI
                                            GameInstance inst,
                                            Registry     registry)
         {
-            var row = mainModList?.ReapplyLabels(guiMod, conflicted, inst, registry);
+            var row = MainModList?.ReapplyLabels(guiMod, conflicted, inst, registry);
             if (row != null)
             {
                 foreach (DataGridViewCell cell in row.Cells)
@@ -402,16 +403,16 @@ namespace CKAN.GUI
                 eld.Dispose();
                 ModuleLabelList.ModuleLabels.Save(ModuleLabelList.DefaultPath);
                 var registry = RegistryManager.Instance(currentInstance, repoData).registry;
-                if (mainModList != null)
+                if (MainModList != null)
                 {
-                    foreach (var module in mainModList.Modules)
+                    foreach (var module in MainModList.Modules)
                     {
-                        mainModList.ReapplyLabels(module, Conflicts?.ContainsKey(module) ?? false,
+                        MainModList.ReapplyLabels(module, Conflicts?.ContainsKey(module) ?? false,
                                                   currentInstance, registry);
                     }
                     UpdateHiddenTagsAndLabels();
                     UpdateCol.Visible = UpdateAllToolButton.Enabled =
-                        mainModList.ResetHasUpdate(currentInstance, registry, ChangeSet, ModGrid.Rows);
+                        MainModList.ResetHasUpdate(currentInstance, registry, ChangeSet, ModGrid.Rows);
                 }
             }
         }
@@ -524,7 +525,7 @@ namespace CKAN.GUI
         {
             Util.Invoke(ModGrid, () =>
             {
-                mainModList?.SetSearches(searches);
+                MainModList?.SetSearches(searches);
                 EditModSearches.SetSearches(searches);
                 ShowHideColumns(searches);
             });
@@ -544,9 +545,9 @@ namespace CKAN.GUI
             }
 
             // If these columns aren't hidden by the user, show them if the search includes installed modules
-            setInstalledColumnsVisible((mainModList?.HasAnyInstalled ?? false)
+            setInstalledColumnsVisible((MainModList?.HasAnyInstalled ?? false)
                                        && !SearchesExcludeInstalled(searches)
-                                       && mainModList.HasVisibleInstalled());
+                                       && MainModList.HasVisibleInstalled());
         }
 
         private static readonly string[] installedColumnNames = new string[]
@@ -572,11 +573,11 @@ namespace CKAN.GUI
 
         public void MarkAllUpdates()
         {
-            if (mainModList != null)
+            if (MainModList != null)
             {
                 WithFrozenChangeset(() =>
                 {
-                    var checkboxes = mainModList.full_list_of_mod_rows
+                    var checkboxes = MainModList.full_list_of_mod_rows
                                                 .Values
                                                 .Where(row => row.Tag is GUIMod { Identifier: string ident}
                                                               && (!Main.Instance?.LabelsHeld(ident) ?? false))
@@ -1040,8 +1041,8 @@ namespace CKAN.GUI
         {
             if (currentInstance != null
                 && sender is GUIMod gmod
-                && mainModList != null
-                && mainModList.full_list_of_mod_rows.TryGetValue(gmod.Identifier,
+                && MainModList != null
+                && MainModList.full_list_of_mod_rows.TryGetValue(gmod.Identifier,
                                                                  out DataGridViewRow? row))
             {
                 switch (e?.PropertyName)
@@ -1088,7 +1089,7 @@ namespace CKAN.GUI
                         break;
 
                     case nameof(GUIMod.IsCached):
-                        row.Visible = mainModList.IsVisible(gmod, currentInstance,
+                        row.Visible = MainModList.IsVisible(gmod, currentInstance,
                                                             RegistryManager.Instance(currentInstance, repoData).registry);
                         if (row.Visible && !ModGrid.Rows.Contains(row))
                         {
@@ -1106,8 +1107,8 @@ namespace CKAN.GUI
                 && currentChangeSet != null
                 && currentChangeSet.Contains(change)
                 && change.IsRemovable
-                && mainModList != null
-                && mainModList.full_list_of_mod_rows.TryGetValue(change.Mod.identifier,
+                && MainModList != null
+                && MainModList.full_list_of_mod_rows.TryGetValue(change.Mod.identifier,
                                                                  out DataGridViewRow? row)
                 && row.Tag is GUIMod guiMod)
             {
@@ -1198,10 +1199,10 @@ namespace CKAN.GUI
                         // Reset changeset
                         ClearChangeSet();
                     }
-                    else if (mainModList != null)
+                    else if (MainModList != null)
                     {
                         // Uninstall all and cancel upgrades
-                        foreach (var row in mainModList.full_list_of_mod_rows.Values)
+                        foreach (var row in MainModList.full_list_of_mod_rows.Values)
                         {
                             if (row.Tag is GUIMod gmod)
                             {
@@ -1215,11 +1216,11 @@ namespace CKAN.GUI
 
         public void ClearChangeSet()
         {
-            if (mainModList != null)
+            if (MainModList != null)
             {
                 WithFrozenChangeset(() =>
                 {
-                    foreach (DataGridViewRow row in mainModList.full_list_of_mod_rows.Values)
+                    foreach (DataGridViewRow row in MainModList.full_list_of_mod_rows.Values)
                     {
                         if (row.Tag is GUIMod gmod)
                         {
@@ -1252,7 +1253,7 @@ namespace CKAN.GUI
                                                     .ToArray();
                         foreach (var mod in noLongerUsed)
                         {
-                            if (mainModList.full_list_of_mod_rows.TryGetValue(mod.identifier, out DataGridViewRow? row)
+                            if (MainModList.full_list_of_mod_rows.TryGetValue(mod.identifier, out DataGridViewRow? row)
                                 && row.Tag is GUIMod gmod)
                             {
                                 gmod.SetAutoInstallChecked(row, AutoInstalled, false);
@@ -1440,7 +1441,7 @@ namespace CKAN.GUI
 
         [ForbidGUICalls]
         public Dictionary<string, GUIMod> AllGUIMods()
-            => (mainModList?.Modules ?? Enumerable.Empty<GUIMod>())
+            => (MainModList?.Modules ?? Enumerable.Empty<GUIMod>())
                    .ToDictionary(guiMod => guiMod.Identifier,
                                  guiMod => guiMod);
 
@@ -1452,7 +1453,7 @@ namespace CKAN.GUI
                 && SelectedModules.Where(m => !m.Module.IsMetapackage
                                               && m.IsCached)
                                   .ToArray()
-                   is { Length: > 0 } and var modules)
+                   is { Length: > 0 } modules)
             {
                 UseWaitCursor = true;
                 var reg = RegistryManager.Instance(currentInstance, repoData).registry;
@@ -1472,20 +1473,20 @@ namespace CKAN.GUI
             if (SelectedModules.Where(m => !m.Module.IsMetapackage
                                            && !m.IsCached)
                                .ToArray()
-                is { Length: > 0 } and var modules)
+                is { Length: > 0 } modules)
             {
-                Main.Instance?.StartDownloads(modules);
+                DownloadModules?.Invoke(modules);
             }
         }
 
         private void EditModSearches_ApplySearches(List<ModSearch> searches)
         {
-            mainModList?.SetSearches(searches);
+            MainModList?.SetSearches(searches);
 
             // If these columns aren't hidden by the user, show them if the search includes installed modules
-            setInstalledColumnsVisible((mainModList?.HasAnyInstalled ?? false)
+            setInstalledColumnsVisible((MainModList?.HasAnyInstalled ?? false)
                                        && !SearchesExcludeInstalled(searches)
-                                       && mainModList.HasVisibleInstalled());
+                                       && MainModList.HasVisibleInstalled());
         }
 
         private void EditModSearches_SurrenderFocus()
@@ -1501,7 +1502,7 @@ namespace CKAN.GUI
 
         private void _UpdateFilters()
         {
-            if (ModGrid == null || mainModList?.full_list_of_mod_rows == null || currentInstance == null)
+            if (ModGrid == null || MainModList?.full_list_of_mod_rows == null || currentInstance == null)
             {
                 return;
             }
@@ -1510,8 +1511,8 @@ namespace CKAN.GUI
             // To make the filtering process faster, Copy the list of rows. Filter out the hidden and replace the
             // rows in DataGridView.
 
-            var rows = new DataGridViewRow[mainModList.full_list_of_mod_rows.Count];
-            mainModList.full_list_of_mod_rows.Values.CopyTo(rows, 0);
+            var rows = new DataGridViewRow[MainModList.full_list_of_mod_rows.Count];
+            MainModList.full_list_of_mod_rows.Values.CopyTo(rows, 0);
             // Try to remember the current scroll position and selected mod
             var scroll_col = Math.Max(0, ModGrid.FirstDisplayedScrollingColumnIndex);
             GUIMod? selected_mod = null;
@@ -1526,7 +1527,7 @@ namespace CKAN.GUI
             var instGame = currentInstance.Game;
             rows.AsParallel().ForAll(row =>
                 row.Visible = row.Tag is GUIMod gmod
-                && mainModList.IsVisible(gmod, currentInstance, registry));
+                && MainModList.IsVisible(gmod, currentInstance, registry));
             ApplyHeaderGlyphs();
             ModGrid.Rows.AddRange(Sort(rows.Where(row => row.Visible)).ToArray());
 
@@ -1584,7 +1585,7 @@ namespace CKAN.GUI
                                              ModuleLabelList.ModuleLabels, manager.Cache, guiConfig)
                                  .ToHashSet();
 
-            foreach (var gmod in mainModList?.full_list_of_mod_rows
+            foreach (var gmod in MainModList?.full_list_of_mod_rows
                                             ?.Values
                                              .Select(row => row.Tag)
                                              .OfType<GUIMod>()
@@ -1619,10 +1620,10 @@ namespace CKAN.GUI
                     }
                 }
             }
-            else if (mainModList != null)
+            else if (MainModList != null)
             {
                 // Copy the new mod flag from the old list.
-                var oldNewMods = mainModList.Modules.Where(m => m.IsNew)
+                var oldNewMods = MainModList.Modules.Where(m => m.IsNew)
                                                     .ToHashSet();
                 foreach (var guiMod in guiMods.Intersect(oldNewMods))
                 {
@@ -1633,39 +1634,39 @@ namespace CKAN.GUI
 
             RaiseMessage?.Invoke(Properties.Resources.MainModListPopulatingList);
             // Update our mod listing
-            mainModList = new ModList(guiMods, currentInstance,
+            MainModList = new ModList(guiMods, currentInstance,
                                       ModuleLabelList.ModuleLabels, ModuleTagList.ModuleTags,
                                       ServiceLocator.Container.Resolve<IConfiguration>(), guiConfig, ChangeSet);
-            mainModList.ModFiltersUpdated += UpdateFilters;
+            MainModList.ModFiltersUpdated += UpdateFilters;
 
             UpdateChangeSetAndConflicts(currentInstance, registry);
 
             RaiseMessage?.Invoke(Properties.Resources.MainModListUpdatingFilters);
 
-            var has_unheld_updates = mainModList.Modules.Any(mod => mod.HasUpdate
+            var has_unheld_updates = MainModList.Modules.Any(mod => mod.HasUpdate
                                                                     && (!Main.Instance?.LabelsHeld(mod.Identifier) ?? true));
             Util.Invoke(Toolbar, () =>
             {
                 FilterCompatibleButton.Text = string.Format(Properties.Resources.MainModListCompatible,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Compatible));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Compatible));
                 FilterInstalledButton.Text = string.Format(Properties.Resources.MainModListInstalled,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Installed));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Installed));
                 FilterInstalledUpdateButton.Text = string.Format(Properties.Resources.MainModListUpgradeable,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.InstalledUpdateAvailable));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.InstalledUpdateAvailable));
                 FilterReplaceableButton.Text = string.Format(Properties.Resources.MainModListReplaceable,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Replaceable));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Replaceable));
                 FilterCachedButton.Text = string.Format(Properties.Resources.MainModListCached,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Cached));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Cached));
                 FilterUncachedButton.Text = string.Format(Properties.Resources.MainModListUncached,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Uncached));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Uncached));
                 FilterNewButton.Text = string.Format(Properties.Resources.MainModListNewlyCompatible,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.NewInRepository));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.NewInRepository));
                 FilterNotInstalledButton.Text = string.Format(Properties.Resources.MainModListNotInstalled,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.NotInstalled));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.NotInstalled));
                 FilterIncompatibleButton.Text = string.Format(Properties.Resources.MainModListIncompatible,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.Incompatible));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.Incompatible));
                 FilterAllButton.Text = string.Format(Properties.Resources.MainModListAll,
-                    mainModList.CountModsByFilter(currentInstance, GUIModFilter.All));
+                    MainModList.CountModsByFilter(currentInstance, GUIModFilter.All));
 
                 UpdateAllToolButton.Enabled = has_unheld_updates;
             });
@@ -1678,7 +1679,7 @@ namespace CKAN.GUI
             Util.Invoke(ModGrid, () =>
             {
                 UpdateCol.Visible  = has_unheld_updates;
-                ReplaceCol.Visible = mainModList.Modules.Any(mod => mod.IsInstalled && mod.HasReplacement);
+                ReplaceCol.Visible = MainModList.Modules.Any(mod => mod.IsInstalled && mod.HasReplacement);
             });
 
             UpdateHiddenTagsAndLabels();
@@ -2034,7 +2035,7 @@ namespace CKAN.GUI
                 {
                     label.Add(instance.Game, module.Identifier);
                 }
-                mainModList?.ReapplyLabels(module, Conflicts?.ContainsKey(module) ?? false,
+                MainModList?.ReapplyLabels(module, Conflicts?.ContainsKey(module) ?? false,
                                            instance, registry);
                 if (module == SelectedModule)
                 {
@@ -2046,7 +2047,7 @@ namespace CKAN.GUI
             if (label.HoldVersion || label.IgnoreMissingFiles)
             {
                 UpdateCol.Visible = UpdateAllToolButton.Enabled =
-                    mainModList?.ResetHasUpdate(instance, registry, ChangeSet, ModGrid.Rows) ?? false;
+                    MainModList?.ResetHasUpdate(instance, registry, ChangeSet, ModGrid.Rows) ?? false;
             }
         }
 
@@ -2175,7 +2176,7 @@ namespace CKAN.GUI
         public HashSet<ModChange> ComputeUserChangeSet()
             => currentInstance == null
                 ? new HashSet<ModChange>()
-                : mainModList?.ComputeUserChangeSet(
+                : MainModList?.ComputeUserChangeSet(
                       RegistryManager.Instance(currentInstance, repoData).registry,
                       currentInstance, UpdateCol, ReplaceCol)
                   ?? new HashSet<ModChange>();
@@ -2189,7 +2190,7 @@ namespace CKAN.GUI
                 return;
             }
 
-            if (mainModList == null || manager?.Cache == null)
+            if (MainModList == null || manager?.Cache == null)
             {
                 return;
             }
@@ -2197,13 +2198,13 @@ namespace CKAN.GUI
             List<ModChange>? full_change_set = null;
             Dictionary<GUIMod, string>? new_conflicts = null;
 
-            var user_change_set = mainModList.ComputeUserChangeSet(registry, inst, UpdateCol, ReplaceCol);
+            var user_change_set = MainModList.ComputeUserChangeSet(registry, inst, UpdateCol, ReplaceCol);
             try
             {
                 // Set the target versions of upgrading mods based on what's actually allowed
                 foreach (var ch in user_change_set.OfType<ModUpgrade>())
                 {
-                    if (mainModList.full_list_of_mod_rows[ch.Mod.identifier].Tag is GUIMod gmod)
+                    if (MainModList.full_list_of_mod_rows[ch.Mod.identifier].Tag is GUIMod gmod)
                     {
                        // This setter calls UpdateChangeSetAndConflicts, so there's a risk of
                        // an infinite loop here. Tread lightly!
@@ -2211,7 +2212,7 @@ namespace CKAN.GUI
                     }
                 }
                 var gameVersion = inst.VersionCriteria();
-                var tuple = mainModList.ComputeFullChangeSetFromUserChangeSet(registry, user_change_set, inst.Game,
+                var tuple = MainModList.ComputeFullChangeSetFromUserChangeSet(registry, user_change_set, inst.Game,
                                                                               inst.StabilityToleranceConfig, gameVersion);
                 full_change_set = tuple.Item1.ToList();
                 new_conflicts = tuple.Item2.ToDictionary(
@@ -2240,7 +2241,7 @@ namespace CKAN.GUI
                 foreach (var ident in identifiers)
                 {
                     // Uncheck the box
-                    if (mainModList.full_list_of_mod_rows[ident].Tag is GUIMod gmod)
+                    if (MainModList.full_list_of_mod_rows[ident].Tag is GUIMod gmod)
                     {
                         gmod.SelectedMod = null;
                     }

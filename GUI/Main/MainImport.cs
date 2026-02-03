@@ -44,14 +44,14 @@ namespace CKAN.GUI
                     Wait.StartWaiting(
                         (sender, e) =>
                         {
-                            if (e != null && Manager?.Cache != null && ManageMods.mainModList != null)
+                            if (e != null && Manager?.Cache != null && ManageMods.MainModList != null)
                             {
                                 e.Result = ModuleImporter.ImportFiles(
                                     GetFiles(dlg.FileNames),
                                     currentUser,
                                     mod =>
                                     {
-                                        if (ManageMods.mainModList
+                                        if (ManageMods.MainModList
                                                       .full_list_of_mod_rows
                                                       .TryGetValue(mod.identifier,
                                                                    out DataGridViewRow? row)

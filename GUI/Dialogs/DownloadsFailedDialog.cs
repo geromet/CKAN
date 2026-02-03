@@ -56,6 +56,10 @@ namespace CKAN.GUI
             Func<object, object, bool> rowsLinked)
         {
             InitializeComponent();
+            if (Platform.IsMono)
+            {
+                GridContextMenuStrip.Renderer = new FlatToolStripRenderer();
+            }
             ExplanationLabel.Text = TopLabelMessage;
             ModColumn.HeaderText  = ModuleColumnHeader;
             AbortButton.Text      = AbortButtonCaption;
@@ -66,14 +70,14 @@ namespace CKAN.GUI
                 .ToList();
             DownloadsGrid.DataSource = new BindingList<DownloadRow>(rows);
             ClientSize = new Size(ClientSize.Width,
-                ExplanationLabel.Height
-                + ExplanationLabel.Padding.Vertical
-                + DownloadsGrid.ColumnHeadersHeight
-                + (DownloadsGrid.RowCount
-                    * DownloadsGrid.RowTemplate.Height)
-                + DownloadsGrid.Margin.Vertical
-                + DownloadsGrid.Padding.Vertical
-                + BottomButtonPanel.Height);
+                                  ExplanationLabel.Height
+                                  + ExplanationLabel.Padding.Vertical
+                                  + DownloadsGrid.ColumnHeadersHeight
+                                  + DownloadsGrid.Rows.OfType<DataGridViewRow>()
+                                                      .Sum(r => r.Height)
+                                  + DownloadsGrid.Margin.Vertical
+                                  + DownloadsGrid.Padding.Vertical
+                                  + BottomButtonPanel.Height);
         }
 
         [ForbidGUICalls]
@@ -95,6 +99,13 @@ namespace CKAN.GUI
         public object[] Skip  => rows.Where(r => r.Skip)
                                      .Select(r => r.Data)
                                      .ToArray();
+
+        protected override void OnResize(EventArgs e)
+        {
+            ExplanationLabel.MaximumSize = new Size(ClientSize.Width - Padding.Horizontal,
+                                                    ClientSize.Height - Padding.Vertical);
+            base.OnResize(e);
+        }
 
         /// <summary>
         /// Open the user guide when the user presses F1
@@ -154,6 +165,25 @@ namespace CKAN.GUI
                     binding.ResetItem(i);
                 }
             }
+        }
+
+        private void DownloadsGrid_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e is { Button: MouseButtons.Right})
+            {
+                // Show the context menu
+                GridContextMenuStrip.Show(Cursor.Position);
+            }
+        }
+
+        private void CopyErrorToolStripMenuItem_Click(object? sender, EventArgs? e)
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine,
+                                          DownloadsGrid.Rows
+                                                       .OfType<DataGridViewRow>()
+                                                       .Select(r => r.DataBoundItem)
+                                                       .OfType<DownloadRow>()
+                                                       .Select(r => r.Error)));
         }
 
         private void RetryButton_Click(object? sender, EventArgs? e)

@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - [GUI] Fix freezing after startup with empty mod list (#4491, #4492 by: HebaruSan)
 - [GUI] Remove dependencies from changeset when skipping a change (#4495 by: HebaruSan)
 - [Multiple] Allow newly installed versions to satisfy deps (#4496 by: HebaruSan)
+- [GUI] Download errors dialog improvements (#4502 by: HebaruSan)
 
 ### Internal
 

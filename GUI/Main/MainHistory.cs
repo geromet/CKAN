@@ -24,10 +24,10 @@ namespace CKAN.GUI
 
         private void InstallationHistory_Install(CkanModule[] modules)
         {
-            if (CurrentInstance != null && ManageMods.mainModList != null)
+            if (CurrentInstance != null && ManageMods.MainModList != null)
             {
                 InstallationHistory_Done();
-                var tuple = ManageMods.mainModList.ComputeFullChangeSetFromUserChangeSet(
+                var tuple = ManageMods.MainModList.ComputeFullChangeSetFromUserChangeSet(
                     RegistryManager.Instance(CurrentInstance, repoData).registry,
                     modules.Select(mod => new ModChange(mod, GUIModChangeType.Install,
                                                         ServiceLocator.Container.Resolve<IConfiguration>()))
