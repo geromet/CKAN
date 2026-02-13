@@ -12,12 +12,10 @@ namespace CKAN
         /// <summary>
         /// Programmatically generate the string "CKAN" from the assembly info attributes,
         /// so we don't have to embed that string in many places
+        /// Uuuuuuhhhh, No!, No we do not do that.
         /// </summary>
         /// <returns>"CKAN"</returns>
-        public static readonly string ProductName =
-            Assembly.GetExecutingAssembly()
-                    .GetAssemblyAttribute<AssemblyProductAttribute>()
-                    .Product;
+        public static readonly string ProductName = "CKAN";
 
         public static readonly ModuleVersion ReleaseVersion = new ModuleVersion(GetVersion());
 
