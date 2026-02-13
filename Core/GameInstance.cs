@@ -203,17 +203,30 @@ namespace CKAN
 
         private string SuppressedCompatWarningIdentifiersFile
             => Path.Combine(CkanDir, "suppressed_compat_warning_identifiers.json");
-
+        private List<string> _installFilters = new();
         public string[] InstallFilters
         {
-            get => (File.Exists(InstallFiltersFile)
-                        ? JsonConvert.DeserializeObject<string[]>(File.ReadAllText(InstallFiltersFile))
-                        : null)
-                   ?? Array.Empty<string>();
+            get {
+                if (_installFilters.Count > 0)
+                {
+                    return _installFilters.ToArray();
+                }
+                else if (File.Exists(InstallFiltersFile))
+                {
+                    var JSON = JsonConvert.DeserializeObject<string[]>(File.ReadAllText(InstallFiltersFile));
+                    return JSON ?? Array.Empty<string>();
+                }
+                else
+                {
+                    return Array.Empty<string>();
+                }
+                   
+            }
 
             #pragma warning disable IDE0027
             set
             {
+                _installFilters = value.ToList();
                 JsonConvert.SerializeObject(value)
                            .WriteThroughTo(InstallFiltersFile);
             }
