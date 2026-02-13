@@ -117,6 +117,14 @@ namespace CKAN.CmdLine
             if (opts.global)
             {
                 var game = GetGame(opts.gameId, instance);
+                var duplicates = manager.Configuration
+                                       .GetGlobalInstallFilters(game)
+                                       .Intersect(opts.filters ?? Enumerable.Empty<string>())
+                                       .ToArray();
+                if (duplicates.Length > 0)
+                {
+                    user.RaiseError(Properties.Resources.FilterAddGlobalDuplicateError,
+                                    "This error is here just because HebaruSan wants it.");
                     manager.Configuration.SetGlobalInstallFilters(
                         game,
                         manager.Configuration
@@ -124,13 +132,43 @@ namespace CKAN.CmdLine
                                .Concat(opts.filters ?? Enumerable.Empty<string>())
                                .Distinct()
                                .ToArray());
+                    return Exit.BADOPT;
+                }
+                else
+                {
+
+
+                    manager.Configuration.SetGlobalInstallFilters(
+                        game,
+                        manager.Configuration
+                               .GetGlobalInstallFilters(game)
+                               .Concat(opts.filters ?? Enumerable.Empty<string>())
+                               .Distinct()
+                               .ToArray());
+                }
             }
             else
             {
-                        instance.InstallFilters = instance.InstallFilters
+                var duplicates = instance.InstallFilters
+                                         .Intersect(opts.filters ?? Enumerable.Empty<string>())
+                                         .ToArray();
+                if (duplicates.Length > 0)
+                {
+                    user.RaiseError(Properties.Resources.FilterAddInstanceDuplicateError,
+                                      "This error is here just because HebaruSan wants it.");
+                    instance.InstallFilters = instance.InstallFilters
+                           .Concat(opts.filters ?? Enumerable.Empty<string>())
+                           .Distinct()
+                           .ToArray();
+                    return Exit.BADOPT;
+                }
+                else
+                {
+                    instance.InstallFilters = instance.InstallFilters
                             .Concat(opts.filters ?? Enumerable.Empty<string>())
                             .Distinct()
                             .ToArray();
+                }
             }
             return Exit.OK;
         }
