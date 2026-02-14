@@ -28,7 +28,7 @@ namespace CKAN
 
         private static object ParseWithProgress(JProperty[] properties, JsonSerializer serializer)
         {
-            if (properties.Length < 100)//TODO:Benchmark and find threshold of when it's worth to parallelize.
+            if (properties.Length < 1000)//TODO:Benchmark and find threshold of when it's worth to parallelize.
             {
                 return properties.Select(prop => new KeyValuePair<string, V?>(
                         prop.Name,
@@ -41,8 +41,7 @@ namespace CKAN
                 .Select(prop => new KeyValuePair<string, V?>(
                     prop.Name,
                     prop.Value.ToObject<V>()))
-                .WithProgress(properties.Length,
-                    serializer.Context.Context as IProgress<int>)
+                // REMOVED: .WithProgress(...) - this was killing performance
                 .ToDictionary();
         }
 

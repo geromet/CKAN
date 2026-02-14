@@ -40,9 +40,6 @@ namespace CKAN.IO
             User             = user;
             this.cancelToken = cancelToken;
         }
-        // Throttle progress updates to avoid overwhelming the GUI thread
-        private DateTime _lastProgressUpdate = DateTime.MinValue;
-        private static readonly TimeSpan ProgressThrottle = TimeSpan.FromMilliseconds(500);
         public IUser User { get; set; }
         
         public event Action<CkanModule, long, long>?      InstallProgress;
@@ -130,8 +127,8 @@ namespace CKAN.IO
                                                  Properties.Resources.NotEnoughSpaceToInstall);
                     Install(mod,
                         (autoInstalled?.Contains(mod) ?? false) || resolver.IsAutoInstalled(mod),
-                        registry_manager.registry,
-                        null,//Disable Deduper for testing// deduper?.ModuleCandidateDuplicates(mod.identifier, mod.version),
+                        registry_manager.registry, 
+                        deduper?.ModuleCandidateDuplicates(mod.identifier, mod.version),
                         ref possibleConfigOnlyDirs,
                         null);
                     modInstallCompletedBytes += mod.install_size;
@@ -394,9 +391,6 @@ namespace CKAN.IO
                             }
                         }
                     }
-                    // Disable per-file progress callbacks - they create too many GUI marshalling events
-                    // Progress is reported at the module level instead, which is sufficient for user feedback
-                    IProgress<long>? fileProgress = null;
                     foreach (InstallableFile file in files)
                     {
                         if (cancelToken.IsCancellationRequested)
@@ -408,7 +402,7 @@ namespace CKAN.IO
                                                candidateDuplicates?.GetValueOrDefault((relPath: file.destination,
                                                                                        size:    file.source.Size))
                                                                   ?? Array.Empty<string>(),
-                                               fileProgress);
+                                               null);
                         if (path != null)
                         {
                             createdPaths.Add(path);
@@ -729,7 +723,7 @@ namespace CKAN.IO
             return fullPath;
         }
 
-        private static readonly TimeSpan UnzipProgressInterval = TimeSpan.FromMilliseconds(10);
+        private static readonly TimeSpan UnzipProgressInterval = TimeSpan.FromMilliseconds(50);
 
         #endregion
 
