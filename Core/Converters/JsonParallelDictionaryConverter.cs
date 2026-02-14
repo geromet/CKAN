@@ -26,17 +26,25 @@ namespace CKAN
                                         .ToArray(),
                                  serializer);
 
-        private static object ParseWithProgress(JProperty[]    properties,
-                                                JsonSerializer serializer)
-            => Partitioner.Create(properties, true)
-                          .AsParallel()
-                          .WithMergeOptions(ParallelMergeOptions.NotBuffered)
-                          .Select(prop => new KeyValuePair<string, V?>(
-                                              prop.Name,
-                                              prop.Value.ToObject<V>()))
-                          .WithProgress(properties.Length,
-                                        serializer.Context.Context as IProgress<int>)
-                          .ToDictionary();
+        private static object ParseWithProgress(JProperty[] properties, JsonSerializer serializer)
+        {
+            if (properties.Length < 100)//TODO:Benchmark and find threshold of when it's worth to parallelize.
+            {
+                return properties.Select(prop => new KeyValuePair<string, V?>(
+                        prop.Name,
+                        prop.Value.ToObject<V>()))
+                    .ToDictionary();
+            }
+            return Partitioner.Create(properties, true)
+                .AsParallel()
+                .WithMergeOptions(ParallelMergeOptions.NotBuffered)
+                .Select(prop => new KeyValuePair<string, V?>(
+                    prop.Name,
+                    prop.Value.ToObject<V>()))
+                .WithProgress(properties.Length,
+                    serializer.Context.Context as IProgress<int>)
+                .ToDictionary();
+        }
 
         [ExcludeFromCodeCoverage]
         public override bool CanWrite => false;
