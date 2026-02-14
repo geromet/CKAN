@@ -214,7 +214,10 @@ namespace CKAN
                 }
                 else if (File.Exists(InstallFiltersFile))
                 {
-                    return JsonConvert.DeserializeObject<string[]>(File.ReadAllText(InstallFiltersFile)) ?? Array.Empty<string>();
+                    var filters = JsonConvert.DeserializeObject<string[]>(File.ReadAllText(InstallFiltersFile)) ??
+                                      Array.Empty<string>();
+                    _installFilters = filters.ToList();
+                    return filters;
                 }
                 else
                 {
