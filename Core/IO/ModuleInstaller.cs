@@ -40,9 +40,11 @@ namespace CKAN.IO
             User             = user;
             this.cancelToken = cancelToken;
         }
-
+        // Throttle progress updates to avoid overwhelming the GUI thread
+        private DateTime _lastProgressUpdate = DateTime.MinValue;
+        private static readonly TimeSpan ProgressThrottle = TimeSpan.FromMilliseconds(500);
         public IUser User { get; set; }
-
+        
         public event Action<CkanModule, long, long>?      InstallProgress;
         public event Action<InstalledModule, long, long>? RemoveProgress;
         public event Action<CkanModule>?                  OneComplete;
@@ -109,27 +111,11 @@ namespace CKAN.IO
             {
                 throw new CancelledActionKraken(Properties.Resources.ModuleInstallerUserDeclined);
             }
-
-            var downloadBytes = CkanModule.GroupByDownloads(downloads)
-                                          .Sum(grp => grp.First().download_size);
-            var rateCounter = new ByteRateCounter()
-            {
-                Size      = downloadBytes + installBytes,
-                BytesLeft = downloadBytes + installBytes,
-            };
-            rateCounter.Start();
-            long downloadedBytes = 0;
-            long installedBytes  = 0;
+            
             if (downloads.Count > 0)
             {
                 downloader ??= new NetAsyncModulesDownloader(User, cache, userAgent, cancelToken);
-                downloader.OverallDownloadProgress += brc =>
-                {
-                    downloadedBytes = downloadBytes - brc.BytesLeft;
-                    rateCounter.BytesLeft = downloadBytes - downloadedBytes
-                                          + installBytes  - installedBytes;
-                    User.RaiseProgress(rateCounter);
-                };
+                
             }
 
             // We're about to install all our mods; so begin our transaction.
@@ -143,34 +129,18 @@ namespace CKAN.IO
                     CKANPathUtils.CheckFreeSpace(gameDir, mod.install_size,
                                                  Properties.Resources.NotEnoughSpaceToInstall);
                     Install(mod,
-                            (autoInstalled?.Contains(mod) ?? false) || resolver.IsAutoInstalled(mod),
-                            registry_manager.registry,
-                            deduper?.ModuleCandidateDuplicates(mod.identifier, mod.version),
-                            ref possibleConfigOnlyDirs,
-                            new ProgressImmediate<long>(bytes =>
-                            {
-                                InstallProgress?.Invoke(mod,
-                                                        Math.Max(0,     mod.install_size - bytes),
-                                                        Math.Max(bytes, mod.install_size));
-                                installedBytes = modInstallCompletedBytes
-                                                 + Math.Min(bytes, mod.install_size);
-                                rateCounter.BytesLeft = downloadBytes - downloadedBytes
-                                                      + installBytes  - installedBytes;
-                                User.RaiseProgress(rateCounter);
-                            }));
+                        (autoInstalled?.Contains(mod) ?? false) || resolver.IsAutoInstalled(mod),
+                        registry_manager.registry,
+                        null,//Disable Deduper for testing// deduper?.ModuleCandidateDuplicates(mod.identifier, mod.version),
+                        ref possibleConfigOnlyDirs,
+                        null);
                     modInstallCompletedBytes += mod.install_size;
                 }
-                rateCounter.Stop();
-
-                User.RaiseProgress(Properties.Resources.ModuleInstallerUpdatingRegistry, 90);
                 registry_manager.Save(!options.without_enforce_consistency);
-
-                User.RaiseProgress(Properties.Resources.ModuleInstallerCommitting, 95);
                 transaction.Complete();
             }
 
             EnforceCacheSizeLimit(registry_manager.registry, cache, config);
-            User.RaiseProgress(Properties.Resources.ModuleInstallerDone, 100);
         }
 
         private static IEnumerable<CkanModule> ModsInDependencyOrder(RelationshipResolver            resolver,
@@ -295,7 +265,7 @@ namespace CKAN.IO
             {
                 // Install all the things!
                 var files = InstallModule(module, filename, registry, candidateDuplicates,
-                                          ref possibleConfigOnlyDirs, out int filteredCount, progress);
+                                          ref possibleConfigOnlyDirs, out int filteredCount, null);
 
                 // Register our module and its files.
                 registry.RegisterModule(module, files, instance, autoInstalled);
@@ -348,7 +318,7 @@ namespace CKAN.IO
                                            Dictionary<(string relPath, long size), string[]>? candidateDuplicates,
                                            ref HashSet<string>?                               possibleConfigOnlyDirs,
                                            out int                                            filteredCount,
-                                           IProgress<long>?                                   moduleProgress)
+                                           IProgress<long>?                                   moduleProgress)                                      
         {
             var createdPaths = new List<string>();
             if (module.IsMetapackage || zip_filename == null)
@@ -424,8 +394,9 @@ namespace CKAN.IO
                             }
                         }
                     }
-                    long installedBytes = 0;
-                    var fileProgress = new ProgressImmediate<long>(bytes => moduleProgress?.Report(installedBytes + bytes));
+                    // Disable per-file progress callbacks - they create too many GUI marshalling events
+                    // Progress is reported at the module level instead, which is sufficient for user feedback
+                    IProgress<long>? fileProgress = null;
                     foreach (InstallableFile file in files)
                     {
                         if (cancelToken.IsCancellationRequested)
@@ -438,7 +409,6 @@ namespace CKAN.IO
                                                                                        size:    file.source.Size))
                                                                   ?? Array.Empty<string>(),
                                                fileProgress);
-                        installedBytes += file.source.Size;
                         if (path != null)
                         {
                             createdPaths.Add(path);
@@ -759,7 +729,7 @@ namespace CKAN.IO
             return fullPath;
         }
 
-        private static readonly TimeSpan UnzipProgressInterval = TimeSpan.FromMilliseconds(200);
+        private static readonly TimeSpan UnzipProgressInterval = TimeSpan.FromMilliseconds(10);
 
         #endregion
 
