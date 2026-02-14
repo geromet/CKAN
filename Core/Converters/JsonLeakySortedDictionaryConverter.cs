@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-
+using System.Linq.Expressions;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -19,15 +19,40 @@ namespace CKAN
         where K : class
         where V : class
     {
-        public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+        // Static nested class ensures one compiled constructor per K type
+        private static class KeyFactory
+        {
+            public static readonly Func<string, K> Create = CompileConstructor();
+            
+            private static Func<string, K> CompileConstructor()
+            {
+                var ctor = typeof(K).GetConstructor(new[] { typeof(string) });
+                if (ctor == null)
+                    throw new InvalidOperationException(
+                        $"Type {typeof(K)} has no constructor that takes a single string parameter");
+                
+                var parameter = Expression.Parameter(typeof(string), "key");
+                var constructorCall = Expression.New(ctor, parameter);
+                var lambda = Expression.Lambda<Func<string, K>>(constructorCall, parameter);
+                
+                return lambda.Compile();
+            }
+        }
+        
+        public override object? ReadJson(JsonReader reader, Type objectType, 
+            object? existingValue, JsonSerializer serializer)
         {
             var dict = new SortedDictionary<K, V>();
+            var createKey = KeyFactory.Create;  // Get cached compiled constructor
+            
             foreach (var kvp in JObject.Load(reader))
             {
                 try
                 {
-                    if (Activator.CreateInstance(typeof(K), kvp.Key) is K k
-                        && kvp.Value?.ToObject<V>() is V v)
+                    var k = createKey(kvp.Key);  // ← NO REFLECTION, compiled IL
+                    var v = kvp.Value?.ToObject<V>();
+                    
+                    if (k != null && v != null)
                     {
                         dict.Add(k, v);
                     }
