@@ -706,11 +706,7 @@ namespace CKAN.IO
                         // 4k is the block size on practically every disk and OS.
                         byte[] buffer = new byte[4096];
                         progress?.Report(0);
-                        StreamUtils.Copy(zipStream, writer, buffer,
-                                         // This doesn't fire at all if the interval never elapses
-                                         (sender, e) => progress?.Report(e.Processed),
-                                         UnzipProgressInterval,
-                                         entry, "InstallFile");
+                        StreamUtils.Copy(zipStream, writer, buffer);//Remove progress bar
                     }
                 }
                 catch (DirectoryNotFoundException ex)
@@ -722,8 +718,6 @@ namespace CKAN.IO
             // Sometimes it has trailing spaces trimmed by the OS.
             return fullPath;
         }
-
-        private static readonly TimeSpan UnzipProgressInterval = TimeSpan.FromMilliseconds(50);
 
         #endregion
 
